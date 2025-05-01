@@ -1,5 +1,5 @@
-# .github/workflows/selenium-allure-ci.yml
-name: Selenium + Allure CI
+# .github/workflows/ci-via-docker.yml
+name: CI via Docker
 
 on:
   push:
@@ -10,51 +10,31 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILDKIT: 1
 
     steps:
-      # 1) Checkout your code
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2) Enable Buildx so we can force AMD64
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 3) Build your Docker image as linux/amd64
       - name: Build Docker image
-        run: docker build --platform linux/amd64 -t selenium-allure .
-
-      # 4) Run tests inside Docker, then copy out the raw Allure results
-      - name: Run tests in Docker
         run: |
-          docker run --name temp-runner selenium-allure || true
-          docker cp temp-runner:/app/allure-results ./allure-results
-          docker rm temp-runner
+          docker build --platform linux/amd64 -t selenium-allure .
 
-      # 5) Install a JRE + Unzip so we can use Allure CLI
-      - name: Install Allure CLI
+      - name: Run tests & generate Allure report
         run: |
-          sudo apt-get update
-          sudo apt-get install -y default-jre unzip
-          wget https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
-          unzip allure-2.27.0.zip -d $HOME/.allure
-          echo "$HOME/.allure/allure-2.27.0/bin" >> $GITHUB_PATH
+          # ensure host folders exist
+          mkdir -p allure-results allure-report
 
-      # 6) Generate the static HTML report
-      - name: Generate Allure HTML report
+          # run container, mount host dirs into /app
+          docker run --rm \
+            -v ${{ github.workspace }}/allure-results:/app/allure-results \
+            -v ${{ github.workspace }}/allure-report:/app/allure-report \
+            selenium-allure
+
+      - name: List generated report
         run: |
-          allure generate allure-results -o allure-report --clean
-
-      # 7) Upload the raw results (for history/trends)
-      - name: Upload raw Allure results
-        uses: actions/upload-artifact@v2
-        with:
-          name: allure-results
-          path: allure-results
-
-      # 8) Upload the generated HTML site
-      - name: Upload generated Allure report
-        uses: actions/upload-artifact@v2
-        with:
-          name: allure-report
-          path: allure-report
+          echo "=== allure-results ==="
+          ls -R allure-results
+          echo "=== allure-report ==="
+          ls -R allure-report
