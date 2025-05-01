@@ -1,3 +1,4 @@
+# .github/workflows/ci.yml
 name: CI with Poetry & Allure
 
 on:
@@ -9,10 +10,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:20.10.16
-        options: --privileged
 
     steps:
       - name: 📥 Checkout code
@@ -35,6 +32,7 @@ jobs:
         run: poetry run pytest --alluredir=allure-results
 
       - name: 📊 Generate Allure HTML report
+        if: always()   # ← runs even if pytest failed
         run: |
           docker run --rm \
             -v "${{ github.workspace }}/allure-results:/app/allure-results" \
@@ -43,6 +41,7 @@ jobs:
               /app/allure-results --clean -o /app/allure-report
 
       - name: 📂 Upload Allure HTML report
+        if: always()   # ← uploads even if pytest failed
         uses: actions/upload-artifact@v4
         with:
           name: allure-html-report
