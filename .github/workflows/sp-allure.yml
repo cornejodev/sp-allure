@@ -1,14 +1,11 @@
+# .github/workflows/selenium-allure-ci.yml
 name: Selenium + Allure CI
 
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: [main, dev]
   pull_request:
-    branches:
-      - main
-      - dev
+    branches: [main, dev]
 
 jobs:
   test:
@@ -19,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
         run: |
@@ -27,9 +24,9 @@ jobs:
 
       - name: Run tests in Docker
         run: |
-          # Don't fail the job if tests fail; we still want the results
+          # run container (don’t fail CI if tests fail)
           docker run --name temp-runner selenium-allure || true
-          # Copy out the raw Allure results
+          # copy raw Allure results out
           docker cp temp-runner:/app/allure-results ./allure-results
           docker rm temp-runner
 
@@ -42,17 +39,16 @@ jobs:
           echo "$HOME/.allure/allure-2.27.0/bin" >> $GITHUB_PATH
 
       - name: Generate Allure HTML report
-        run: |
-          allure generate allure-results -o allure-report --clean
+        run: allure generate allure-results -o allure-report --clean
 
       - name: Upload Allure results (raw)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: allure-results
           path: allure-results
 
       - name: Upload Allure report (HTML)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: allure-report
-          path: allure-report
+          path: allure-repo
