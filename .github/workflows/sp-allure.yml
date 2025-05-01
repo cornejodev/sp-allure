@@ -7,13 +7,17 @@ on:
   pull_request:
     branches: [ main, dev ]
 
+# grant write access so the pages action can push to your repo
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: 🔧 Set up Python 3.11
         uses: actions/setup-python@v4
@@ -31,18 +35,33 @@ jobs:
       - name: ▶️ Run tests with Allure
         run: poetry run pytest --alluredir=allure-results
 
-      - name: 📊 Generate Allure HTML report
-        if: always()   # ← runs even if pytest failed
-        run: |
-          docker run --rm \
-            -v "${{ github.workspace }}/allure-results:/app/allure-results" \
-            -v "${{ github.workspace }}/allure-report:/app/allure-report" \
-            ghcr.io/qameta/allure-cli:latest generate \
-              /app/allure-results --clean -o /app/allure-report
-
-      - name: 📂 Upload Allure HTML report
-        if: always()   # ← uploads even if pytest failed
-        uses: actions/upload-artifact@v4
+      # ——————————————————————————————————————————————
+      # 1) Load up your existing pages branch so history is preserved
+      - name: Load test report history
+        uses: actions/checkout@v3
+        if: always() 
+        continue-on-error: true
         with:
-          name: allure-html-report
-          path: allure-report
+          ref: gh-pages
+          path: gh-pages
+      # :contentReference[oaicite:0]{index=0}
+
+      # 2) Build the merged report (current + history)
+      - name: Build test report
+        uses: simple-elf/[email protected]
+        if: always()
+        with:
+          gh_pages: gh-pages
+          allure_results: allure-results
+          allure_history: allure-history
+      # :contentReference[oaicite:1]{index=1}
+
+      # 3) Push the report back to gh-pages for GitHub Pages to serve
+      - name: Publish test report
+        uses: peaceiris/actions-gh-pages@v3
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
+      # :contentReference[oaicite:2]{index=2}
