@@ -3,9 +3,9 @@ name: CI via Docker
 
 on:
   push:
-    branches: [main, dev]
+    branches: [ main, dev ]
   pull_request:
-    branches: [main, dev]
+    branches: [ main, dev ]
 
 jobs:
   test:
@@ -22,15 +22,10 @@ jobs:
           docker build --platform linux/amd64 -t selenium-allure .
 
       - name: Run tests + generate Allure report
+        id: run_tests
+        continue-on-error: true
         run: |
-          # Ensure host dirs exist
           mkdir -p allure-results allure-report
-
-          # Run container: 
-          #  - mount host dirs into /app
-          #  - run pytest (dump raw JSON into allure-results)
-          #  - always return zero so we can proceed
-          #  - then generate the static HTML into allure-report
           docker run --rm \
             -v ${{ github.workspace }}/allure-results:/app/allure-results \
             -v ${{ github.workspace }}/allure-report:/app/allure-report \
@@ -43,7 +38,12 @@ jobs:
           ls -R allure-report
 
       - name: Upload Allure HTML report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report
+
+      - name: Fail if tests failed
+        if: ${{ steps.run_tests.outcome == 'failure' }}
+        run: exit 1
