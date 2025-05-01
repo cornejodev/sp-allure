@@ -23,10 +23,7 @@ jobs:
 
       - name: Run tests & generate Allure report
         run: |
-          # ensure host folders exist
           mkdir -p allure-results allure-report
-
-          # run container, mount host dirs into /app
           docker run --rm \
             -v ${{ github.workspace }}/allure-results:/app/allure-results \
             -v ${{ github.workspace }}/allure-report:/app/allure-report \
@@ -38,3 +35,9 @@ jobs:
           ls -R allure-results
           echo "=== allure-report ==="
           ls -R allure-report
+
+      - name: Upload Allure HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
