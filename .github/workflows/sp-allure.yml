@@ -19,8 +19,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        run: |
-          docker build --platform linux/amd64 -t selenium-allure .
+        run: docker build --platform linux/amd64 -t selenium-allure .
 
       - name: Run tests in Docker
         run: |
@@ -39,14 +38,14 @@ jobs:
       - name: Generate Allure HTML report
         run: allure generate allure-results -o allure-report --clean
 
-      - name: Upload Allure results (raw)
-        uses: actions/upload-artifact@v2
+      - name: Upload raw Allure results
+        uses: actions/upload-artifact@v3
         with:
           name: allure-results
           path: allure-results
 
-      - name: Upload Allure report (HTML)
-        uses: actions/upload-artifact@v2
+      - name: Upload generated Allure report
+        uses: actions/upload-artifact@v3
         with:
           name: allure-report
           path: allure-report
