@@ -10,40 +10,37 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_BUILDKIT: 1
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre unzip
+          wget https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
+          unzip allure-2.27.0.zip -d $HOME/.allure
+          echo "$HOME/.allure/allure-2.27.0/bin" >> $GITHUB_PATH
+
       - name: Build Docker image
-        run: |
-          docker build --platform linux/amd64 -t selenium-allure .
+        run: docker build --platform linux/amd64 -t selenium-allure .
 
-      - name: Run tests + generate Allure report
-        id: run_tests
-        continue-on-error: true
+      - name: Run tests in Docker & extract results
         run: |
-          mkdir -p allure-results allure-report
-          docker run --rm \
-            -v ${{ github.workspace }}/allure-results:/app/allure-results \
-            -v ${{ github.workspace }}/allure-report:/app/allure-report \
-            selenium-allure \
-            sh -c "pytest --alluredir=allure-results || true && allure generate allure-results -o allure-report --clean"
+          # allow failures so we still generate the report
+          docker run --name temp-selenium-runner selenium-allure || true
+          rm -rf allure-results
+          docker cp temp-selenium-runner:/app/allure-results ./allure-results
+          docker rm temp-selenium-runner
 
-      - name: List generated report
+      - name: Generate Allure HTML report
         run: |
-          echo "=== Generated HTML files ==="
-          ls -R allure-report
+          rm -rf allure-report
+          allure generate allure-results -o allure-report --clean
 
       - name: Upload Allure HTML report
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report
-
-      - name: Fail if tests failed
-        if: ${{ steps.run_tests.outcome == 'failure' }}
-        run: exit 1
