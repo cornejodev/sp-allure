@@ -1,4 +1,4 @@
-# Selenium + Pytest + HTML Reporting
+# Selenium + Pytest + Allure Reporting + Docker
 
 ## Run Tests and Generate Report
 
