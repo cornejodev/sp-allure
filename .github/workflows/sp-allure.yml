@@ -1,67 +1,72 @@
-# .github/workflows/ci.yml
-name: CI with Poetry & Allure
+name: Selenium + Allure Tests
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, dev ]
-
-# grant write access so the pages action can push to your repo
-permissions:
-  contents: write
+    branches: [ main ]
 
 jobs:
-  test:
+  run-tests:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: 🔧 Set up Python 3.11
-        uses: actions/setup-python@v4
+      - name: Set up Python  # match your pyproject.toml Python constraint
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 📦 Install Poetry
+      - name: Install Poetry
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          python -m pip install --upgrade pip
+          pip install poetry
 
-      - name: 🛠️ Install dependencies
-        run: poetry install --no-root
+      - name: Install dependencies via Poetry
+        run: |
+          poetry install --no-interaction --no-ansi
 
-      - name: ▶️ Run tests with Allure
-        run: poetry run pytest --alluredir=allure-results
+      - name: Run Selenium tests & collect Allure results
+        run: |
+          mkdir -p allure-results
+          poetry run pytest --alluredir=allure-results
 
-      # ——————————————————————————————————————————————
-      # 1) Load up your existing pages branch so history is preserved
-      - name: Load test report history
-        uses: actions/checkout@v3
-        if: always() 
-        continue-on-error: true
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
+  publish-report:
+    needs: run-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: gh-pages
-      # :contentReference[oaicite:0]{index=0}
 
-      # 2) Build the merged report (current + history)
-      - name: Build test report
-        uses: simple-elf/[email protected]
-        if: always()
+      - name: Download Allure results
+        uses: actions/download-artifact@v4
         with:
-          gh_pages: gh-pages
-          allure_results: allure-results
-          allure_history: allure-history
-      # :contentReference[oaicite:1]{index=1}
+          name: allure-results
+          path: allure-results
 
-      # 3) Push the report back to gh-pages for GitHub Pages to serve
-      - name: Publish test report
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Generate Allure HTML report
+        uses: simple-elf/allure-report-action@v1.12
+        with:
+          allure_results: allure-results
+          allure_history: gh-pages/allure-history
+
+      - name: Deploy report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: gh-pages/allure-history
           publish_branch: gh-pages
-          publish_dir: allure-history
-      # :contentReference[oaicite:2]{index=2}
