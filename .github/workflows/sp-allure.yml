@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     services:
       docker:
-        # ensure Docker is available
         image: docker:20.10.16
         options: --privileged
 
@@ -33,7 +32,7 @@ jobs:
         run: poetry install --no-root
 
       - name: ▶️ Run tests with Allure
-        run: pytest --alluredir=allure-results
+        run: poetry run pytest --alluredir=allure-results
 
       - name: 📊 Generate Allure HTML report
         run: |
