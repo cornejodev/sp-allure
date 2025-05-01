@@ -1,5 +1,4 @@
-# .github/workflows/ci-via-docker.yml
-name: CI via Docker
+name: CI with Poetry & Allure
 
 on:
   push:
@@ -10,49 +9,42 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      docker:
+        # ensure Docker is available
+        image: docker:20.10.16
+        options: --privileged
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Allure CLI
+      - name: 🔧 Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Poetry
         run: |
-          sudo apt-get update
-          sudo apt-get install -y default-jre unzip
-          wget https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
-          unzip allure-2.27.0.zip -d $HOME/.allure
-          echo "$HOME/.allure/allure-2.27.0/bin" >> $GITHUB_PATH
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Build Docker image
-        run: docker build --platform linux/amd64 -t selenium-allure .
+      - name: 🛠️ Install dependencies
+        run: poetry install --no-root
 
-      - name: Run tests in Docker & extract results
+      - name: ▶️ Run tests with Allure
+        run: pytest --alluredir=allure-results
+
+      - name: 📊 Generate Allure HTML report
         run: |
-          # allow failures so we still generate the report
-          docker run --name temp-selenium-runner selenium-allure || true
-          rm -rf allure-results
-          docker cp temp-selenium-runner:/app/allure-results ./allure-results
-          docker rm temp-selenium-runner
+          docker run --rm \
+            -v "${{ github.workspace }}/allure-results:/app/allure-results" \
+            -v "${{ github.workspace }}/allure-report:/app/allure-report" \
+            ghcr.io/qameta/allure-cli:latest generate \
+              /app/allure-results --clean -o /app/allure-report
 
-      - name: Generate Allure HTML report
-        run: |
-          rm -rf allure-report
-          allure generate allure-results -o allure-report --clean
-
-      - name: Upload Allure HTML report
+      - name: 📂 Upload Allure HTML report
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report
+          name: allure-html-report
           path: allure-report
-
-      - name: Fail if any test failed
-        if: always() 
-        run: |
-          # count occurrences of failed status in Allure JSON
-          COUNT=$(grep -o '"status":"failed"' -R allure-results | wc -l)
-          if [ "$COUNT" -gt 0 ]; then
-            echo "::error::Detected $COUNT failed test(s) in allure-results."
-            exit 1
-          else
-            echo "✅ No failed tests detected."
-          fi
