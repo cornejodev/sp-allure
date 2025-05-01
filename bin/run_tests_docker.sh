@@ -5,6 +5,9 @@ set -e  # Exit on error
 IMAGE_NAME=selenium-allure
 CONTAINER_NAME=temp-selenium-runner
 
+rm -rf allure-report
+rm -rf allure-results
+
 # Step 1: Build Docker image
 echo "🔨 Building Docker image..."
 docker build -t $IMAGE_NAME .
