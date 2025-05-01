@@ -1,0 +1,3 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","545","test_google_search_fail","tests","Thu May 01 14:19:24 GMT 2025","failed","Thu May 01 14:19:25 GMT 2025","","test_google","",""
+"","2295","test_google_search_pass","tests","Thu May 01 14:19:21 GMT 2025","passed","Thu May 01 14:19:23 GMT 2025","","test_google","",""
