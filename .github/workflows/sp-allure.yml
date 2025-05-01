@@ -43,7 +43,7 @@ jobs:
           ls -R allure-report
 
       - name: Upload Allure HTML report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report
