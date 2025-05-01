@@ -5,6 +5,7 @@ set -e  # Exit on error
 IMAGE_NAME=selenium-allure
 CONTAINER_NAME=temp-selenium-runner
 
+# Clean Up Old Reports
 rm -rf allure-report
 rm -rf allure-results
 
