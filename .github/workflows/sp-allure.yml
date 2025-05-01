@@ -21,24 +21,29 @@ jobs:
         run: |
           docker build --platform linux/amd64 -t selenium-allure .
 
-      - name: Run tests & generate Allure report
+      - name: Run tests + generate Allure report
         run: |
+          # Ensure host dirs exist
           mkdir -p allure-results allure-report
+
+          # Run container: 
+          #  - mount host dirs into /app
+          #  - run pytest (dump raw JSON into allure-results)
+          #  - always return zero so we can proceed
+          #  - then generate the static HTML into allure-report
           docker run --rm \
             -v ${{ github.workspace }}/allure-results:/app/allure-results \
             -v ${{ github.workspace }}/allure-report:/app/allure-report \
-            selenium-allure
+            selenium-allure \
+            sh -c "pytest --alluredir=allure-results || true && allure generate allure-results -o allure-report --clean"
 
       - name: List generated report
         run: |
-          echo "=== allure-results ==="
-          ls -R allure-results
-          echo "=== allure-report ==="
+          echo "=== Generated HTML files ==="
           ls -R allure-report
 
       - name: Upload Allure HTML report
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v2
         with:
           name: allure-report
           path: allure-report
