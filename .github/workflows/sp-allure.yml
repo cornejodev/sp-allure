@@ -12,21 +12,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Checkout your code
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2) Enable Buildx so we can force AMD64
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 3) Build your Docker image as linux/amd64
       - name: Build Docker image
         run: docker build --platform linux/amd64 -t selenium-allure .
 
+      # 4) Run tests inside Docker, then copy out the raw Allure results
       - name: Run tests in Docker
         run: |
           docker run --name temp-runner selenium-allure || true
           docker cp temp-runner:/app/allure-results ./allure-results
           docker rm temp-runner
 
+      # 5) Install a JRE + Unzip so we can use Allure CLI
       - name: Install Allure CLI
         run: |
           sudo apt-get update
@@ -35,17 +40,21 @@ jobs:
           unzip allure-2.27.0.zip -d $HOME/.allure
           echo "$HOME/.allure/allure-2.27.0/bin" >> $GITHUB_PATH
 
+      # 6) Generate the static HTML report
       - name: Generate Allure HTML report
-        run: allure generate allure-results -o allure-report --clean
+        run: |
+          allure generate allure-results -o allure-report --clean
 
+      # 7) Upload the raw results (for history/trends)
       - name: Upload raw Allure results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: allure-results
           path: allure-results
 
+      # 8) Upload the generated HTML site
       - name: Upload generated Allure report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: allure-report
           path: allure-report
