@@ -1,0 +1,58 @@
+name: Selenium + Allure CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build --platform linux/amd64 -t selenium-allure .
+
+      - name: Run tests in Docker
+        run: |
+          # Don't fail the job if tests fail; we still want the results
+          docker run --name temp-runner selenium-allure || true
+          # Copy out the raw Allure results
+          docker cp temp-runner:/app/allure-results ./allure-results
+          docker rm temp-runner
+
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre unzip
+          wget https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
+          unzip allure-2.27.0.zip -d $HOME/.allure
+          echo "$HOME/.allure/allure-2.27.0/bin" >> $GITHUB_PATH
+
+      - name: Generate Allure HTML report
+        run: |
+          allure generate allure-results -o allure-report --clean
+
+      - name: Upload Allure results (raw)
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Upload Allure report (HTML)
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-report
+          path: allure-report
