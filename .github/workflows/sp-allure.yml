@@ -10,6 +10,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILDKIT: 1
 
     steps:
       - name: Checkout code
@@ -26,21 +28,29 @@ jobs:
       - name: Build Docker image
         run: docker build --platform linux/amd64 -t selenium-allure .
 
-      - name: Run tests in Docker & extract results
+      - name: Run tests + generate Allure report
+        id: run_tests
+        continue-on-error: true
         run: |
-          # allow failures so we still generate the report
-          docker run --name temp-selenium-runner selenium-allure || true
-          rm -rf allure-results
-          docker cp temp-selenium-runner:/app/allure-results ./allure-results
-          docker rm temp-selenium-runner
-
-      - name: Generate Allure HTML report
-        run: |
-          rm -rf allure-report
-          allure generate allure-results -o allure-report --clean
+          mkdir -p allure-results allure-report
+          docker run --rm \
+            -v ${{ github.workspace }}/allure-results:/app/allure-results \
+            -v ${{ github.workspace }}/allure-report:/app/allure-report \
+            selenium-allure \
+            sh -c "\
+              pytest --alluredir=allure-results; \
+              EXIT_CODE=$?; \
+              allure generate allure-results -o allure-report --clean; \
+              exit $EXIT_CODE\
+            "
 
       - name: Upload Allure HTML report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report
+
+      - name: Fail if any test failed
+        if: ${{ steps.run_tests.outcome == 'failure' }}
+        run: exit 1
