@@ -24,9 +24,7 @@ jobs:
 
       - name: Run tests in Docker
         run: |
-          # run container (don’t fail CI if tests fail)
           docker run --name temp-runner selenium-allure || true
-          # copy raw Allure results out
           docker cp temp-runner:/app/allure-results ./allure-results
           docker rm temp-runner
 
@@ -42,13 +40,13 @@ jobs:
         run: allure generate allure-results -o allure-report --clean
 
       - name: Upload Allure results (raw)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: allure-results
           path: allure-results
 
       - name: Upload Allure report (HTML)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: allure-report
-          path: allure-repo
+          path: allure-report
