@@ -1,0 +1,1 @@
+{"634f5d2439f820e13288e14eebc71ad0":{"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"items":[{"uid":"37834ca5caada86e","reportUrl":"https://cornejodev.github.io/sp-allure/21//#testresult/37834ca5caada86e","status":"passed","time":{"start":1746104564966,"stop":1746104566708,"duration":1742}}]}}
