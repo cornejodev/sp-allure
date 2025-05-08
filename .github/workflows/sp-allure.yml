@@ -2,11 +2,11 @@ name: Selenium + Allure Tests
 
 on:
   workflow_dispatch:
-  
+
   push:
-    branches: [ main ]
+    branches: [ sp-allure ]
   pull_request:
-    branches: [ main ]
+    branches: [ sp-allure ]
 
 jobs:
   run-tests:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python  # match your pyproject.toml Python constraint
+      - name: Set up Python  # match pyproject.toml Python constraint
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -42,9 +42,24 @@ jobs:
           name: allure-results
           path: allure-results
 
+      - name: Generate Allure HTML report
+        if: always()
+        run: |
+          # ensure the CLI is available in the image or install it (if needed)
+          # e.g., sudo apt-get update && sudo apt-get install -y allure-commandline
+          mkdir -p allure-report
+          allure generate allure-results --clean -o allure-report
+
+      - name: Upload Allure HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+
   publish-report:
     needs: run-tests
-    if: ${{ always() }}    # ← run even if run-tests failed
+    if: ${{ always() }}    # run even if run-tests failed
     runs-on: ubuntu-latest
 
     steps:
@@ -60,7 +75,7 @@ jobs:
           name: allure-results
           path: allure-results
 
-      - name: Generate Allure HTML report
+      - name: Generate Allure HTML report (with history)
         uses: simple-elf/allure-report-action@v1.12
         with:
           allure_results: allure-results
