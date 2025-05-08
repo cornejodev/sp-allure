@@ -1,89 +1,48 @@
-name: Selenium + Allure Tests
+# .github/workflows/ci.yml
+name: CI with Poetry & Allure
 
 on:
-  workflow_dispatch:
-
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
-  run-tests:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python  # match pyproject.toml Python constraint
-        uses: actions/setup-python@v5
+      - name: 🔧 Set up Python 3.11
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install Poetry
+      - name: 📦 Install Poetry
         run: |
-          python -m pip install --upgrade pip
-          pip install poetry
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies via Poetry
+      - name: 🛠️ Install dependencies
+        run: poetry install --no-root
+
+      - name: ▶️ Run tests with Allure
+        run: poetry run pytest --alluredir=allure-results
+
+      - name: 📊 Generate Allure HTML report
+        if: always()   # ← runs even if pytest failed
         run: |
-          poetry install --no-interaction --no-ansi
+          docker run --rm \
+            -v "${{ github.workspace }}/allure-results:/app/allure-results" \
+            -v "${{ github.workspace }}/allure-report:/app/allure-report" \
+            ghcr.io/qameta/allure-cli:latest generate \
+              /app/allure-results --clean -o /app/allure-report
 
-      - name: Run Selenium tests & collect Allure results
-        run: |
-          mkdir -p allure-results
-          poetry run pytest --alluredir=allure-results
-
-      - name: Upload Allure results
-        if: always()
+      - name: 📂 Upload Allure HTML report
+        if: always()   # ← uploads even if pytest failed
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results
-          path: allure-results
-
-      - name: Generate Allure HTML report
-        if: always()
-        run: |
-          # ensure the CLI is available in the image or install it (if needed)
-          # e.g., sudo apt-get update && sudo apt-get install -y allure-commandline
-          mkdir -p allure-report
-          allure generate allure-results --clean -o allure-report
-
-      - name: Upload Allure HTML report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-report
+          name: allure-html-report
           path: allure-report
-
-  publish-report:
-    needs: run-tests
-    if: ${{ always() }}    # run even if run-tests failed
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-
-      - name: Download Allure results
-        uses: actions/download-artifact@v4
-        with:
-          name: allure-results
-          path: allure-results
-
-      - name: Generate Allure HTML report (with history)
-        uses: simple-elf/allure-report-action@v1.12
-        with:
-          allure_results: allure-results
-          allure_history: gh-pages/allure-history
-
-      - name: Deploy report to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: gh-pages/allure-history
-          publish_branch: gh-pages
