@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
 
   push:
-    branches: [ sp-allure ]
+    branches: [ main ]
   pull_request:
-    branches: [ sp-allure ]
+    branches: [ main ]
 
 jobs:
   run-tests:
