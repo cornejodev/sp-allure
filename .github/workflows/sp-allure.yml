@@ -11,11 +11,13 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python  # match pyproject.toml Python constraint
         uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
+        with:
+          python-version: '3.11'
 
       - name: Install Poetry
         run: |
@@ -23,7 +25,8 @@ jobs:
           pip install poetry
 
       - name: Install dependencies via Poetry
-        run: poetry install --no-interaction --no-ansi
+        run: |
+          poetry install --no-interaction --no-ansi
 
       - name: Run Selenium tests & collect Allure results
         run: |
@@ -48,15 +51,17 @@ jobs:
           name: allure-results
           path: allure-results
 
+      - name: Setup Allure CLI
+        uses: lukechannings/setup-allure@v2
+        with:
+          version: '2.21.0'
+
       - name: Generate Allure HTML report
-        if: always()
         run: |
-          # assume 'allure' CLI is in PATH
           mkdir -p allure-report
           allure generate allure-results --clean -o allure-report
 
       - name: Upload Allure HTML report
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
