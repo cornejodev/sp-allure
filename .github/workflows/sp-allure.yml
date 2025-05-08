@@ -51,10 +51,15 @@ jobs:
           name: allure-results
           path: allure-results
 
-      - name: Setup Allure CLI
-        uses: lukechannings/setup-allure@v2
-        with:
-          version: '2.21.0'
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre unzip wget
+          ALLURE_VERSION=2.21.0
+          wget https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz
+          tar -xzf allure-${ALLURE_VERSION}.tgz
+          sudo mv allure-${ALLURE_VERSION} /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
 
       - name: Generate Allure HTML report
         run: |
